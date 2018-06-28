@@ -50,12 +50,31 @@ def getBitsFromInt(number):
         numberToAnd/2
     return bits
 
+def convertQTListsToTables(tablesAsLists):
+    tables = []
+    for index, table in enumerate(tablesAsLists):
+        tables.append([])
+        #hmmm
+
 def readDQT(file):
-    length = getInt(file, 2)
+    length = getLength(file)
 
     info = getInt(file, 1)
     bits = getBitsFromInt(info)
-    print(bits)
+    precision = 0
+    if not bits[4]+bits[5]+bits[6]+bits[7] == 0:
+        precision = 1
+    expect(length-1, 64*(precision+1), "Length of QT values")
+    bytesLeft = int((length-1)/64)
+
+    tablesAsLists = []
+    for currentTable in range(bytesLeft):
+        tablesAsLists.append([])
+        for currentByte in range(length-1):
+            tablesAsLists[currentTable].append(getInt(file, 1))
+
+    convertQTListsToTables(tablesAsLists)
+
     sys.exit()
 
 def readMarkerSegments(file):
