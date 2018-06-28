@@ -38,8 +38,6 @@ def readAPP0(file):
     #skip the thumbnail info
     skipBytes(file, length-7)
 
-    return True
-
 def readSOI(file):
     expect(file.read(1), b'\xff', "SOI first byte")
     expect(file.read(1), b'\xd8', "SOI second byte")
