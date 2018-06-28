@@ -23,12 +23,13 @@ def getLength(file):
     return getInt(file, 2)-2
 
 def readAPP0(file):
-    expect(file.read(1), b'\xff', "APP0 first byte")
-    expect(file.read(1), b'\xe0', "APP0 second byte")
-
     length = getLength(file)
 
-    expect(getIdentifier(file), "JFIF", "JFIF identifier")
+    identifier = getIdentifier(file)
+    print(identifier)
+    if not identifier == "JFIF":
+        skipBytes(file, length-5)
+        return
 
     majorVersion = getInt(file, 1)
     minorVersion = getInt(file, 1)
@@ -47,48 +48,78 @@ def getBitsFromInt(number):
     bits = []
     for i in range(8):
         bits.append(number & numberToAnd)
-        numberToAnd/2
+        numberToAnd = int(numberToAnd/2)
     return bits
 
-def convertQTListsToTables(tablesAsLists):
-    tables = []
-    for index, table in enumerate(tablesAsLists):
-        tables.append([])
-        #hmmm
+def bitsToInt(bits):
+    out = 0
+    for bit in bits:
+        out = (out << 1) | bit
+    return out
+
+def getDQTInfo(file):
+    infoInt = getInt(file, 1)
+    bits = getBitsFromInt(infoInt)
+    return (bitsToInt(bits[:4]), bitsToInt(bits[4:]))
 
 def readDQT(file):
     length = getLength(file)
 
-    info = getInt(file, 1)
-    bits = getBitsFromInt(info)
-    precision = 0
-    if not bits[4]+bits[5]+bits[6]+bits[7] == 0:
-        precision = 1
-    expect(length-1, 64*(precision+1), "Length of QT values")
-    bytesLeft = int((length-1)/64)
+    numTables = int((length-1)/64)
 
     tablesAsLists = []
-    for currentTable in range(bytesLeft):
-        tablesAsLists.append([])
-        for currentByte in range(length-1):
-            tablesAsLists[currentTable].append(getInt(file, 1))
+    for currentTable in range(numTables):
 
-    convertQTListsToTables(tablesAsLists)
+        precision, destination = getDQTInfo(file)
+        if not precision == 0:
+            precision = 1
+        if destination == 0:
+            destination = "luminance"
+        elif destination == 1:
+            destination = "chrominance"
+        else:
+            expect(destination, 1, "Destination is not 1 or 0")
 
-    sys.exit()
+        tablesAsLists.append({"destination": destination, "list": []})
+        for currentByte in range(64):
+            tablesAsLists[currentTable]["list"].append(getInt(file, precision+1))
+        return tablesAsLists
+
+def readSOF0(file):
+    pass
+def readDHT(file):
+    pass
+def readSOS(file):
+    pass
+def readDRI(file):
+    pass
+def readEOI(file):
+    pass
+def readSOF1(file):
+    pass
 
 def readMarkerSegments(file):
     readSOI(file)
-    readAPP0(file)
+
+    tableQT = []
 
     while True:
         expect(file.read(1), b'\xff', "First marker byte")
+
         markerName = getMarker(file.read(1))
-        getattr(sys.modules[__name__], "read" + markerName)(file)
+        print(markerName)
+
+        info = getattr(sys.modules[__name__], "read" + markerName)(file)
+
+        if markerName == "DQT":
+            tableQT.extend(info)
+
+        input("")
 
 def getMarker(byte):
     markers = {
-        #already handled: b'\xe0': 'APP0', # JFIF APP0
+        b'\xe0': 'APP0', # JFIF APP0
+        b'\xe1': 'APP0', # JFIF APP1 (I don't what it's for)
         b'\xc0': 'SOF0', # Start Of Frame
         b'\xc1': 'SOF1',
         b'\xc4': 'DHT',  # Define Huffman Table
