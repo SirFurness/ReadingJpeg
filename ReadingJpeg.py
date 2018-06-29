@@ -1,27 +1,14 @@
 from utils import *
-from DQT import readDQT
-from SOF0 import readSOF0
-
-def readAPP0(file):
-    length = getLength(file)
-
-    identifier = getIdentifier(file)
-    print(identifier)
-    if not identifier == "JFIF":
-        skipBytes(file, length-5)
-        return
-
-    majorVersion = getInt(file, 1)
-    minorVersion = getInt(file, 1)
-
-    expect(majorVersion, 1, "JFIF version 1.x")
-
-    #skip the thumbnail info
-    skipBytes(file, length-7)
+from Segments.DQT import readDQT
+from Segments.SOF0 import readSOF0
+from Segments.APP0 import readAPP0
 
 def readSOI(file):
     expect(file.read(1), b'\xff', "SOI first byte")
     expect(file.read(1), b'\xd8', "SOI second byte")
+
+def readUnknown(file):
+    skipBytes(file, getLength(file))
 
 def readDHT(file):
     pass
@@ -64,7 +51,11 @@ def getMarker(byte):
         b'\xdd': 'DRI',  # Define Restart Interval
         b'\xd9': 'EOI'   # End Of Image
     }
-    return markers[byte]
+    try:
+        return markers[byte]
+    except KeyError:
+        print(byte)
+        return 'Unknown'
 
 if __name__ == "__main__":
     filename = input("Input jpeg/jpg file name: ")
