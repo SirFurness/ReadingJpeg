@@ -37,7 +37,7 @@ def readSOF1(file):
 def readMarkerSegments(file):
     readSOI(file)
 
-    tableQT = []
+    quantizationTables = []
 
     while True:
         expect(file.read(1), b'\xff', "First marker byte")
@@ -48,7 +48,7 @@ def readMarkerSegments(file):
         info = getattr(sys.modules[__name__], "read" + markerName)(file)
 
         if markerName == "DQT":
-            tableQT.extend(info)
+            quantizationTables.extend(info)
 
         input("")
 

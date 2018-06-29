@@ -14,37 +14,53 @@ def bitsToInt(bits):
         out = (out << 1) | bit
     return out
 
-def getDQTInfo(file):
-    infoInt = getInt(file, 1)
-    bits = getBitsFromInt(infoInt)
-
-    precision = bitsToInt(bits[:4])
-    if not precision == 0:
-        precision = 1
-
+def getDestination(bits):
     destination = bitsToInt(bits[4:])
     if destination == 0:
         destination = "luminance"
     elif destination == 1:
-        destination == "chrominance"
+        destination = "chrominance"
     else:
         expect(destination, 1, "Destination is not 1 or 0")
+    return destination
+
+def getPrecision(bits):
+    precision = bitsToInt(bits[:4])
+    if not precision == 0:
+        precision = 1
+    return precision
+
+def getDQTInfo(file):
+    infoInt = getInt(file, 1)
+    bits = getBitsFromInt(infoInt)
+
+    precision = getPrecision(bits)
+    destination = getDestination(bits)
 
     return (precision, destination)
+
+def getQT(file, precision):
+    table = []
+    for currentByte in range(64):
+        table.append(getInt(file, precision+1))
+    return table
 
 def readDQT(file):
     length = getLength(file)
 
-    numTables = int((length-1)/64)
+    lengthRemaining = length
 
     tablesAsLists = []
-    for currentTable in range(numTables):
-
+    while not lengthRemaining == 0:
         precision, destination = getDQTInfo(file)
+        lengthRemaining -= 1
 
         tablesAsLists.append({"destination": destination, "list": []})
-        for currentByte in range(64):
-            tablesAsLists[currentTable]["list"].append(getInt(file, precision+1))
+
+        quantizationTable = getQT(file, precision)
+        tablesAsLists[-1]["list"].append(quantizationTable)
+
+        lengthRemaining -= 64*(precision+1)
 
     return tablesAsLists
 
