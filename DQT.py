@@ -58,7 +58,7 @@ def readDQT(file):
         tablesAsLists.append({"destination": destination, "list": []})
 
         quantizationTable = getQT(file, precision)
-        tablesAsLists[-1]["list"].append(quantizationTable)
+        tablesAsLists[-1]["list"] = quantizationTable
 
         lengthRemaining -= 64*(precision+1)
 
